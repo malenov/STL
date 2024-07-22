@@ -1657,7 +1657,7 @@ static bool Is_Constant(
     UpperChar = Total = 0;
     do
     {
-        if ( IS_UPPER_CHAR( *ptr ) )
+        if ( !IS_LOWER_CHAR( *ptr ) )
             UpperChar += 100;
         Total++;
         ptr++;
