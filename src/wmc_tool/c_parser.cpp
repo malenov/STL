@@ -4667,7 +4667,8 @@ ret:
  * Instrument_Keywords
  *-------------------------------------------------------------------*/
 static TOOL_ERROR Instrument_Keywords(
-    Parse_Context_def *ParseCtx_ptr )
+    Parse_Context_def *ParseCtx_ptr,
+    bool skip_cmplx_instrum)
 {
     TOOL_ERROR ErrCode = NO_ERR;
 
@@ -4696,7 +4697,7 @@ static TOOL_ERROR Instrument_Keywords(
         item_type = ParseRec_ptr->item_type;
 
         /* Skipped? */
-        unless( item_type & ITEM_SKIPPED )
+        if( !(item_type & ITEM_SKIPPED) )
         { /* No */
             /* In Skipped or Non-Instrumented Region? */
             if ( Find_Region( ParseRec_ptr->item_start, ParseTbl_ptr, ITEM_SKIPPED | ITEM_INSTRUMENTATION_OFF ) < 0
@@ -4704,13 +4705,21 @@ static TOOL_ERROR Instrument_Keywords(
                  || ( item_type == ITEM_KEYWORD_RETURN
                       /* 'return not' Instrumented in Skipped Regions */
                       && Find_Region( ParseRec_ptr->item_start, ParseTbl_ptr, ITEM_SKIPPED ) < 0
-                      && Find_Region( ParseRec_ptr->item_start, ParseTbl_ptr, ITEM_FUNC_BLOCK ) < 0 && Find_Region( ParseRec_ptr->item_start, ParseTbl_ptr, ITEM_FUNC_BLOCK | ITEM_FUNC_MATH ) < 0 && Find_Region( ParseRec_ptr->item_start, ParseTbl_ptr, ITEM_FUNC_BLOCK | ITEM_FUNC_SYSTEM ) < 0 ) )
+                      && Find_Region( ParseRec_ptr->item_start, ParseTbl_ptr, ITEM_FUNC_BLOCK ) < 0 
+                      && Find_Region( ParseRec_ptr->item_start, ParseTbl_ptr, ITEM_FUNC_BLOCK | ITEM_FUNC_MATH ) < 0
+                      && Find_Region( ParseRec_ptr->item_start, ParseTbl_ptr, ITEM_FUNC_BLOCK | ITEM_FUNC_SYSTEM ) < 0 ) )
             { /* No */
                 /* Instrument After (by default) */
                 ptr = ParseRec_ptr->item_end;
 
-                /* Is it a 'while' that is part of a 'do' Block? */
-                /* Insert Instrumentation Character */
+                if (skip_cmplx_instrum && item_type != ITEM_KEYWORD_RETURN)
+                {
+                    /* skip the instrumentation if the user specified so on the command-line */
+                    /* with the exception of the 'return' keywords */
+                    continue;
+                }
+
+                /* Insert Instrumentation Character '_' */
                 if ( ( ErrCode = Add_Insertion( &ParseCtx_ptr->InsertTbl, ptr, WORD_INSTRUMENT_STRING ) ) != NO_ERR )
                 {
                     goto ret;
@@ -4719,29 +4728,28 @@ static TOOL_ERROR Instrument_Keywords(
                 /* Is it a 'while'?
                    Auto Instrumentation Macro for 'while' in a 'do' Block
                    can handle multiple Condition. */
-                if ( item_type == ITEM_KEYWORD_WHILE
-                      /* 'while' from 'do/while' now Needs Extra () for Multiple Condition*/
-                     || item_type == ITEM_KEYWORD_WHILE2
-                )
+                if (item_type == ITEM_KEYWORD_WHILE
+                    /* 'while' from 'do/while' now Needs Extra () for Multiple Condition*/
+                    || item_type == ITEM_KEYWORD_WHILE2 )
                 { /* Yes */
                     /* Advance to Parameters Record */
                     ParseRec_ptr++;
                     /* More than one Condition? */
-                    if ( Count_Args( ParseRec_ptr->item_start,
-                                     ParseRec_ptr->item_end - 1,
-                                     ParseTbl_ptr ) > 1 )
+                    if (Count_Args(ParseRec_ptr->item_start,
+                        ParseRec_ptr->item_end - 1,
+                        ParseTbl_ptr) > 1)
                     { /* Yes */
                         /* Must Add Extra () */
-                        if ( ( ErrCode = Add_Insertion( &ParseCtx_ptr->InsertTbl,
-                                                        ParseRec_ptr->item_start,
-                                                        "(" ) ) != NO_ERR )
+                        if ((ErrCode = Add_Insertion(&ParseCtx_ptr->InsertTbl,
+                            ParseRec_ptr->item_start,
+                            "(")) != NO_ERR)
                         {
                             goto ret;
                         }
 
-                        if ( ( ErrCode = Add_Insertion( &ParseCtx_ptr->InsertTbl,
-                                                        ParseRec_ptr->item_end,
-                                                        ")" ) ) != NO_ERR )
+                        if ((ErrCode = Add_Insertion(&ParseCtx_ptr->InsertTbl,
+                            ParseRec_ptr->item_end,
+                            ")")) != NO_ERR)
                         {
                             goto ret;
                         }
@@ -8112,7 +8120,9 @@ TOOL_ERROR Include_Header(
 
 TOOL_ERROR Instrument(
     Parse_Context_def *ParseCtx_ptr,
-    bool instrument_ROM )
+    bool instrument_ROM, 
+    bool skip_cmplx_instrum
+)
 {
     TOOL_ERROR ErrCode = NO_ERR;
 
@@ -8122,6 +8132,7 @@ TOOL_ERROR Instrument(
         ErrCode = Internal_Error( __FUNCTION__ );
         goto ret;
     }
+
     /* Set State Failure (by default) */
     ParseCtx_ptr->State = INS_FAILED;
 
@@ -8149,7 +8160,7 @@ TOOL_ERROR Instrument(
     /* Erase Function Call Table */
     ParseCtx_ptr->FctCallTbl.Size = 0;
 
-    if ( ( ErrCode = Instrument_Calls( ParseCtx_ptr ) ) != NO_ERR )
+    if ((ErrCode = Instrument_Calls(ParseCtx_ptr)) != NO_ERR)
     {
         goto ret;
     }
@@ -8170,7 +8181,7 @@ TOOL_ERROR Instrument(
     }
 
     is_function_present = 0;
-    if (idx > 0)
+    if ( idx > 0 )
     {
         is_function_present = 1;
     }
@@ -8263,17 +8274,20 @@ TOOL_ERROR Instrument(
         /*                     $(...) inserted on same Line as #pragma message for Skipped Region */
     }
 
-    if ( ( ErrCode = Instrument_Operators( ParseCtx_ptr ) ) != NO_ERR )
+    if (!skip_cmplx_instrum)
+    {
+        if ((ErrCode = Instrument_Operators(ParseCtx_ptr)) != NO_ERR)
+        {
+            goto ret;
+        }
+    }
+
+    if ((ErrCode = Instrument_Keywords(ParseCtx_ptr, skip_cmplx_instrum)) != NO_ERR)
     {
         goto ret;
     }
 
-    if ( ( ErrCode = Instrument_Keywords( ParseCtx_ptr ) ) != NO_ERR )
-    {
-        goto ret;
-    }
-
-    if ( instrument_ROM && is_cnst_data_present)
+    if ( instrument_ROM && is_cnst_data_present )
     {
         if ( ( ErrCode = Instrument_ROM( ParseCtx_ptr) ) != NO_ERR )
         {

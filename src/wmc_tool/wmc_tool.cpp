@@ -54,10 +54,11 @@
 #define DESINSTRUMENT_ONLY   0x001
 #define REMOVE_MANUAL_INSTR  0x002
 #define VERBOSE              0x004
+#define SKIP_CMPLX_INSTRUM   0x010
 #define NO_BACKUP            0x020
 #define INSTR_INFO_ONLY      0x040
-#define OUTPUT_WMOPS_FILES   0x080
 #define INSTRUMENT_ROM       0x100
+#define OUTPUT_WMOPS_FILES   0x200
 
 /* Other Constants */
 #define BACKUP_SUFFIX        ".bak"
@@ -77,6 +78,7 @@ static void usage()
           "Options:\n"
           "     -h [--help]: print help\n"
           "     -v [--verbose]: print warnings and other information messages\n"
+          "     -s [--skip-cmplx-instrumentation]: skip complexity instrumentation\n"
           "     -i [--info-only]: only print instrumentation information\n"
           "     -d [--desinstrument]: desintrument only\n"
           "     -m filename [--rom filename]: add statistics about ROM and RAM consumption\n"
@@ -190,6 +192,10 @@ static TOOL_ERROR Parse_Command_Line(
         else if (_stricmp(arg_name, "i") == 0 || _stricmp(arg_name, "info-only") == 0)
         {
             *Operation |= INSTR_INFO_ONLY;
+        }
+        else if (_stricmp(arg_name, "s") == 0 || _stricmp(arg_name, "skip-cmplx-instrumentation") == 0)
+        {
+            *Operation |= SKIP_CMPLX_INSTRUM;
         }
         else if (_stricmp(arg_name, "c") == 0 || _stricmp(arg_name, "generate-wmc-files") == 0)
         {
@@ -993,7 +999,7 @@ static TOOL_ERROR Process_File(
     if ( !( Operation & DESINSTRUMENT_ONLY ) )
     { /* Yes */
         /* Instrument */
-        if ((ErrCode = Instrument(ParseCtx_ptr, (Operation & INSTRUMENT_ROM) != 0)) != NO_ERR)
+        if ((ErrCode = Instrument(ParseCtx_ptr, (Operation & INSTRUMENT_ROM) != 0, (Operation & SKIP_CMPLX_INSTRUM) != 0)) != NO_ERR)
         {
             fprintf(stdout, "\n");
             return ErrCode;
@@ -1238,7 +1244,14 @@ int main( int argc, char *argv[] )
 
         if (!(Operation & DESINSTRUMENT_ONLY))
         {
-            fprintf(stdout, "- instrumenting all functions and table (const) data memory\n");
+            if (Operation & SKIP_CMPLX_INSTRUM)
+            {
+                fprintf(stdout, "- skipping instrumentation of functions\n");
+            }
+            else
+            {
+                fprintf(stdout, "- instrumenting all functions and table (const) data memory\n");
+            }
         }
 
         if (Operation & OUTPUT_WMOPS_FILES)

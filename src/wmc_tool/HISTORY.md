@@ -67,3 +67,7 @@
  * added an exemplary Python script `mem_analysis.py` for graphical analysis and profiling of dynamic memory alloations based on the generated `.csv` file
  * added support for counting complexity and PROM size of BASOP operations and BASOP functions within floating-point source code
   
+## v1.5.1
+
+ * added the -s (--skip_cmplx_instrumentation) command-line option, which avoids the instrumentation of function bodies. The func_start_ and return_ keywords, along with the remaining functionality, remain unchanged.
+  
