@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.5)
 project(wmc_tool)
 include(CTest)
 
@@ -10,8 +10,8 @@ if(WIN32)
   )
 endif()  
 
-add_executable(wmc_tool c_parser.cpp output.cpp text_utils.cpp wmc_tool.cpp)
-find_package(PythonInterp)
+add_executable(wmc_tool parsing_defs.h c_parser.h c_parser.cpp output.h output.cpp text_utils.h text_utils.cpp constants.h wmc_tool.h wmc_tool.cpp)
+find_package (Python COMPONENTS Interpreter)
 
 # Testing
 file(TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/test_data TEST_DIR)
