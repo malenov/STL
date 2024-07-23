@@ -5897,7 +5897,7 @@ static TOOL_ERROR Instrument_Calls(
                 }
                 /* System Allocation Function */
                 /* !! VM: Added && Find_Region(.) to avoid instrumentation of malloc() calls within WMC_TOOL_SKIP segments */
-                if ( (item_type & ITEM_FUNC_SYSTEM) && Find_Region(ParseRec_ptr->item_start, ParseTbl_ptr, ITEM_SKIPPED | ITEM_INSTRUMENTATION_OFF) < 0 )
+                if ((item_type & ITEM_FUNC_SYSTEM) && Find_Region(ParseRec_ptr->item_start, ParseTbl_ptr, ITEM_SKIPPED) < 0)
                 { /* Yes */
                     /* Insert Instrumentation */
                     if ( ( ErrCode = Add_Insertion( &ParseCtx_ptr->InsertTbl, end, WORD_INSTRUMENT_STRING ) ) != NO_ERR )
