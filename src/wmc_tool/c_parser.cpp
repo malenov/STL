@@ -7343,7 +7343,6 @@ ret:
 }
 
 
-
 /*-------------------------------------------------------------------*
  * DesInstrument_ROM
  *-------------------------------------------------------------------*/
@@ -7384,121 +7383,82 @@ TOOL_ERROR DesInstrument_ROM(
         start = ParseRec_ptr->item_start;
         tmp = ParseRec_ptr->item_end;
 
-        /* Instrumentation Code? E.g. 'AddedByWMC_Tool' */
-        if (ParseRec_ptr->item_type & ITEM_FUNC_COUNTERS_AUTO && ((ParseRec_ptr->item_type & ITEM_FUNC_COUNTERS_MAN) == 0 ||
-            Find_Region(start, ParseTbl_ptr, ITEM_INSTRUMENTATION_OFF) < 0))
-        { /* Yes */
-            if (!(ParseRec_ptr->item_type & ITEM_PREPROC_LINE))
-            {
-                /* Delete it */
-                Delete(start, tmp);
-            }
-        }
-
-        /* 'Const_Data_PROM_Table' Declaration? */
-        else if (ParseRec_ptr->item_type & ITEM_DATA_DECL)
+        /* Data Declaration? */
+        if (ParseRec_ptr->item_type & ITEM_DATA_DECL)
         { /* Yes */
 
-            /* Check if this ROM_Size_Lookup_Table declaration */
+            /* Check if this is ROM_Size_Lookup_Table declaration */
             if (strnistr(start, "ROM_Size_Lookup_Table", strlen("ROM_Size_Lookup_Table")) != NULL)
             {
-                /* Save the pointers - will be used later to check, if it was enclosed in #ifdef WMOPS .. #endif pair */
-                start_const_data_prom_table = start;
-                end_const_data_prom_table = tmp;
-            }
+                /* Go back to the beginning of the line */
+                start = Goto_Chars(start, EOL_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE, BACKWARDS);
+                start++;
 
-            /* Delete it */
-            Delete(start, tmp);
-
-        }
-
-        /* One of the ROM counting functions, e.g. 'Const_Data_Size_Func(...)'? */
-        else if (ParseRec_ptr->item_type & ITEM_FUNC_DEF)
-        { /* Yes */
-            /* Is function prototype or block followed by some blank chars? -> delete them as well */
-            if (ParseRec_ptr->item_type & (ITEM_FUNC_PROTO | ITEM_FUNC_BLOCK))
-            {
-                tmp = Skip_Chars(tmp, BLANK_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_COMMENT, FORWARD);
-            }
-
-            /* Delete it */
-            Delete(start, tmp);
-
-            /* Desintrumenting Function Name? -> Check if it's preceded by 'extern int' or 'static int' return type */
-            if (ParseRec_ptr->item_type & ITEM_FUNC_NAME)
-            {
-                /* Find the end of the preceding keyword */
-                while ((tmp = Skip_Chars(start - 1, SPACE_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_MOVED_OVER, BACKWARDS)) != NULL && IS_IDENTIFIER_CHAR(*tmp))
+                /* Check, if line starts with "AddedByWMC_Tool */
+                while (strncmp(start, ADDED_TOOL_INFO_STRING, strlen(ADDED_TOOL_INFO_STRING)) == 0)
                 {
-                    /* Find the beginning of the preceding keyword */
-                    start = Skip_Identifier(tmp, BACKWARDS) + 1;
-
-                    /* Check if the found keyword matches one of 'extern', 'static' or 'int' */
-                    if (memwordcmp(start, STORAGE_STRING) || memwordcmp(start, INT_STRING))
-                    { /* Yes */
-                        /* Delete it */
-                        Delete(start, tmp + 2);
-                    }
-                }
-            }
-
-            /* Item is no Longer a Function Name/Proto/Block */
-            ParseRec_ptr->item_type &= ~ITEM_FUNC_DEF;
-        }
-
-        /* Item is no Longer Instrumentation */
-        ParseRec_ptr->item_type ^= ITEM_INSTRUMENTATION;
-    }
-
-    /* Check, if Const_Data_PROM_Table[] was enclosed in #ifdef WMOPS .. #endif pair */
-    if (start_const_data_prom_table != NULL && end_const_data_prom_table != NULL)
-    {
-        /* Go back to the first word preceding Const_Data_PROM_Table[] */
-        start = Skip_Chars(start_const_data_prom_table - 1, BLANK_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE, BACKWARDS);
-
-        /* Proceed to the beginning of the line */
-        while (!IS_EOL_CHAR(PREV_CHAR(start)))
-        {
-            start--;
-        }
-
-        /* Check if line contains "#ifdef WMOPS" */
-        if ( (tmp = stristr(memstr(start, start_const_data_prom_table), "#ifdef")) != NULL)
-        {
-            tmp = Skip_Identifier(tmp, FORWARD);
-            tmp = Skip_Chars(tmp + 1, SPACE_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE);
-            if (strncmp(tmp, "WMOPS", strlen("WMOPS")) == 0)
-            {
-                /* Delete the whole line */
-                Delete(start, start_const_data_prom_table);
-            }
-        }
-
-        /* Go to the first word after Const_Data_PROM_Table[]  */
-        end = Skip_Chars(end_const_data_prom_table, BLANK_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE);
-
-        /* Check if line contains "#endif" */
-        while (!IS_EOL_CHAR(NEXT_CHAR(end)))
-        {
-            if (*end == '#')
-            {
-                /* Found '#' */
-                if (strncmp(end, "#endif", strlen("#endif")) == 0)
-                {
-                    /* Go to EOL */
-                    while (*end != LF_CHAR)
+                    /* check, if line continues with "#ifdef WMOPS" */
+                    if (strncmp(start + strlen(ADDED_TOOL_INFO_STRING), "#ifdef WMOPS", strlen("#ifdef WMOPS")) == 0)
                     {
-                        end++;
+                        start_const_data_prom_table = start;
+                        break;
                     }
-
-                    /* Delete the whole line */
-                    Delete(end_const_data_prom_table, end);
-
-                    break;
+                    else
+                    {
+                        /* Go back to the beginning of the previous line */
+                        start = Skip_Chars(start - 1, EOL_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE, BACKWARDS);
+                        start = Goto_Chars(start, EOL_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE, BACKWARDS);
+                        start++;
+                    }
                 }
-            }
 
-            end++;
+                if (!IS_EOL_CHAR(PREV_CHAR(tmp)))
+                {
+                    /* Go to the beginning of the next line */
+                    tmp = Goto_Chars(tmp, EOL_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE, FORWARD);
+                    tmp = Skip_Chars(tmp, EOL_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE, FORWARD);
+                }
+
+                /* Check, if line starts with "AddedByWMC_Tool */
+                while (strncmp(tmp, ADDED_TOOL_INFO_STRING, strlen(ADDED_TOOL_INFO_STRING)) == 0)
+                {
+                    /* check, if line continues with "#endif" */
+                    if (strncmp(tmp + strlen(ADDED_TOOL_INFO_STRING), "#endif", strlen("#endif")) == 0)
+                    {
+                        /* Go to the end this line */
+                        tmp = Goto_Chars(tmp, EOL_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE, FORWARD);
+
+                        /* Go past the EOL */
+                        if (IS_EOL_SEQ(tmp))
+                        {
+                            /* One Extra step, if it's CR+LF */
+                            tmp++;
+                        }
+                        tmp++;
+
+                        end_const_data_prom_table = tmp;
+                        break;
+                    }
+                    else
+                    {
+                        /* Go to the beginning of the next line */
+                        tmp = Goto_Chars(tmp, EOL_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE, FORWARD);
+                        tmp = Skip_Chars(tmp, EOL_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE, FORWARD);
+                    }
+                }
+
+                if (start_const_data_prom_table != NULL && end_const_data_prom_table != NULL)
+                {
+                    /* Delete the whole segment */
+                    Delete(start, tmp);
+                }
+
+                /* Item is no Longer a Declaration */
+                ParseRec_ptr->item_type ^= ITEM_DATA_DECL;
+
+                /* Item is no Longer Instrumentation */
+                ParseRec_ptr->item_type ^= ITEM_INSTRUMENTATION;
+            }
         }
     }
 
