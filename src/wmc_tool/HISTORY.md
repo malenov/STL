@@ -71,3 +71,9 @@
 
  * added the -s (--skip_cmplx_instrumentation) command-line option, which avoids the instrumentation of function bodies. The func_start_ and return_ keywords, along with the remaining functionality, remain unchanged.
   
+## v1.6
+
+ * fixed instrumentation issues in encoder.c of the 3GPP EVS codec where malloc() is instrumented and print_mem() is present as well
+ * when #undef WMC_TOOL_SKIP is missing, automatically assume end of file, but before the last automatically instrumented segment
+ * the function DesInstrument_ROM() is called in all regular files as well as the file pointed to with the -m command-line argument
+  
