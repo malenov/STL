@@ -995,6 +995,13 @@ static TOOL_ERROR Process_File(
         return ErrCode;
     }
 
+    /* DesInstrument Const_Data_Size_XXX Functions */
+    if ( ( ErrCode = DesInstrument_ROM( ParseCtx_ptr ) ) != NO_ERR )
+    {
+        fprintf(stdout, "\n");
+        return ErrCode;
+    }
+
     /* Instrument */
     if ( !( Operation & DESINSTRUMENT_ONLY ) )
     { /* Yes */
@@ -1160,6 +1167,7 @@ int main( int argc, char *argv[] )
     char Const_Data_PROM_File[MAX_PATH] = "";
     char wmops_output_dir[MAX_PATH];
     float frames_per_sec;
+    bool Const_Data_PROM_File_already_reinstrumented = 0;
     T_FILE_BOOK file_book[MAX_RECORDS];
     struct stat s;
     Parse_Context_def ParseContext;
@@ -1434,6 +1442,12 @@ int main( int argc, char *argv[] )
             /* Process File */
             ErrCode = Process_File(LongFileName, Operation, &ParseContext, MaxFnLength, (Operation & NO_BACKUP) == 0, j * 100.0f / file_book[i].nFiles);
 
+            /* Check if the processed file is the same as */
+            if (strcmp(LongFileName, Const_Data_PROM_File) == 0)
+            {
+                Const_Data_PROM_File_already_reinstrumented = 1;
+            }
+
             /* Update # of Bytes Processed */
             nBytesProcessed += ParseContext.File.Size;
 
@@ -1526,10 +1540,13 @@ int main( int argc, char *argv[] )
             goto ret;
         }
 
-        /* DesInstrument Const_Data_Size_XXX Functions */
-        if ((ErrCode = DesInstrument_ROM(&ParseContext)) != NO_ERR)
+        /* DesInstrument Const_Data_PROM_Table[] */
+        if (!Const_Data_PROM_File_already_reinstrumented)
         {
-            goto ret;
+            if ((ErrCode = DesInstrument_ROM(&ParseContext)) != NO_ERR)
+            {
+                goto ret;
+            }
         }
 
         /* Check, if "wmc_auto.h" is included */
