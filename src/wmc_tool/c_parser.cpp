@@ -3549,6 +3549,46 @@ static TOOL_ERROR Find_Preproc_Instrumentation(
         }
     }
 
+    /* Mark all lines preceded by AddedByWMC_Tool as Instrumentation */
+    
+    /* Start at Beginning */
+    ptr = ParseCtx_ptr->File.Data;
+
+    /* Search for AddedBy_WMC_Tool string which has not been marked as instrumentation yet */
+    while ((ptr = Find_Identifier(ptr, ADDED_TOOL_INFO_STRING, ParseTbl_ptr, ITEM_COMMENT, ITEM_INSTRUMENTATION, &idx)) != NULL)
+    {
+        /* Get Record */
+        ParseRec_ptr = &ParseTbl_ptr->Data[idx];
+
+        /* Mark as Instrumentation */
+        ParseRec_ptr->item_type |= ITEM_INSTRUMENTATION;
+
+        ptr = ParseRec_ptr->item_end;
+
+        /* check, if is followed by #ifdef or #endif statement */
+        if ((idx = Find_Region(ptr, ParseTbl_ptr, ITEM_PREPROC_CMD | ITEM_PREPROC_COND)) > 0)
+        {
+            /* Get Record */
+            ParseRec_ptr = &ParseTbl_ptr->Data[idx];
+
+            /* Mark as Instrumentation */
+            ParseRec_ptr->item_type |= ITEM_INSTRUMENTATION;
+
+            if (memwordcmp(ptr, "#if #ifdef #ifndef #elif") != NULL)
+            {
+                /* Get the next record - should be Preprocessor Directive Arguments */
+                ParseRec_ptr = &ParseTbl_ptr->Data[idx + 1];
+
+                /* Mark as Instrumentation */
+                ParseRec_ptr->item_type |= ITEM_INSTRUMENTATION;
+            }
+
+            /* Advance pointer to the end of Preprocessor Arguments (Skip Spaces and Comments Only) */
+            ptr = Skip_Chars(ParseRec_ptr->item_end, BLANK_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_COMMENT);
+        }
+    }
+
+
     return ErrCode;
 }
 
@@ -4769,7 +4809,7 @@ static TOOL_ERROR Instrument_Keywords(
                     }
                 }
 
-                /* Count Program Memory */
+                ///* Count Program Memory */
                 //if ( item_type == ITEM_KEYWORD_FOR )
                 //    loops++, ParseCtx_ptr->PROMSize += prom_ops_weights_ptr->loop;
                 //else if ( item_type == ITEM_KEYWORD_WHILE )
@@ -4779,7 +4819,8 @@ static TOOL_ERROR Instrument_Keywords(
             }
 
             /* Count Program Memory */   /* !!! VM: Moved to this place to count PROM size even for non-instrumented keywords */
-            if ( Find_Region(ParseRec_ptr->item_start, ParseTbl_ptr, ITEM_SKIPPED) < 0 )
+            //if ( Find_Region(ParseRec_ptr->item_start, ParseTbl_ptr, ITEM_SKIPPED) < 0 )
+            if (!IS_RESERVED_CHAR(*(ParseRec_ptr->item_start)))
             {
                 if (item_type == ITEM_KEYWORD_FOR)
                     loops++, ParseCtx_ptr->PROMSize += prom_ops_weights_ptr->loop;
@@ -6462,13 +6503,46 @@ TOOL_ERROR Setup_Regions(
                                       ITEM_PREPROC_ARGS | ITEM_PREPROC_UNDEF, ITEM_ENCLOSED, &idx ) ) == NULL )
         { /* No */
             
-            /* Error - #undef WMC_TOOL_SKIP missing ! */
-            ErrCode = ERR_EXPECTED_EOS;
-            Error("Unable to find matching #undef %s!", ErrCode, WMC_TOOL_SKIP_STRING);
-            goto ret;
+            ///* Error - #undef WMC_TOOL_SKIP missing ! */
+            //ErrCode = ERR_EXPECTED_EOS;
+            //Error("Unable to find matching #undef %s!", ErrCode, WMC_TOOL_SKIP_STRING);
+            //goto ret;
 
-            /* Skipped Region will End at EOF */
-            //end = file_ptr->Data + file_ptr->Size;
+            /* Go to EOF */
+            end = file_ptr->Data + file_ptr->Size;
+
+            /* Go back by skipping all lines preceded by AddedByWMC_Tool */
+
+             /* Go back to the beginning of the line */
+            end = Skip_Chars(end, BLANK_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE, BACKWARDS);
+            end = Goto_Chars(end, EOL_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE, BACKWARDS);
+            end++;
+
+            /* Check, if line starts with "AddedByWMC_Tool */
+            while (strncmp(end, ADDED_TOOL_INFO_STRING, strlen(ADDED_TOOL_INFO_STRING)) == 0)
+            {
+                /* Go back to the beginning of the previous line */
+                end = Skip_Chars(end - 1, BLANK_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE, BACKWARDS);
+                end = Goto_Chars(end, EOL_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE, BACKWARDS);
+                end++;
+            }
+
+            /* Go to the end of the current line */
+            end = Goto_Chars(end, EOL_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_NONE, FORWARD);
+
+            if (end == NULL)
+            {
+                /* reached the end of file */
+                end = file_ptr->Data + file_ptr->Size;
+            }
+            else if (IS_EOL_SEQ(end))
+            {
+                end += 2;
+            }
+            else
+            {
+                end++;
+            }
         }
         else
         { /* Yes */
@@ -6483,7 +6557,7 @@ TOOL_ERROR Setup_Regions(
         }
 
         /* Add Non-Instrumented Region */
-        if ( ( ErrCode = Add_Region( ParseTbl_ptr, ITEM_INSTRUMENTATION_OFF, ptr, end ) ) != NO_ERR )
+        if ( ( ErrCode = Add_Region( ParseTbl_ptr, ITEM_SKIPPED | ITEM_INSTRUMENTATION_OFF, ptr, end ) ) != NO_ERR )
         {
             goto ret;
         }
@@ -7348,7 +7422,8 @@ ret:
  *-------------------------------------------------------------------*/
 
 TOOL_ERROR DesInstrument_ROM(
-    Parse_Context_def* ParseCtx_ptr)
+    Parse_Context_def* ParseCtx_ptr
+)
 {
     TOOL_ERROR ErrCode = NO_ERR;
 
@@ -7359,13 +7434,6 @@ TOOL_ERROR DesInstrument_ROM(
 
     start_const_data_prom_table = NULL;
     end_const_data_prom_table = NULL;
-
-    /* Check Previous State */
-    if (ParseCtx_ptr->State != SETUP_OK)
-    {
-        ErrCode = Internal_Error(__FUNCTION__);
-        goto ret;
-    }
 
     /* Set State Failure (by default) */
     ParseCtx_ptr->State = DI_FAILED;
@@ -7383,8 +7451,18 @@ TOOL_ERROR DesInstrument_ROM(
         start = ParseRec_ptr->item_start;
         tmp = ParseRec_ptr->item_end;
 
+        /* Instrumentation Code? E.g. 'AddedByWMC_Tool' */
+        if (ParseRec_ptr->item_type & ITEM_FUNC_COUNTERS_AUTO && ((ParseRec_ptr->item_type & ITEM_FUNC_COUNTERS_MAN) == 0 ||
+            Find_Region(start, ParseTbl_ptr, ITEM_INSTRUMENTATION_OFF) < 0))
+        { /* Yes */
+            if (!(ParseRec_ptr->item_type & ITEM_PREPROC_LINE))
+            {
+                /* Delete it */
+                Delete(start, tmp);
+            }
+        }
         /* Data Declaration? */
-        if (ParseRec_ptr->item_type & ITEM_DATA_DECL)
+        else if (ParseRec_ptr->item_type & ITEM_DATA_DECL)
         { /* Yes */
 
             /* Check if this is ROM_Size_Lookup_Table declaration */
@@ -7460,6 +7538,56 @@ TOOL_ERROR DesInstrument_ROM(
                 ParseRec_ptr->item_type ^= ITEM_INSTRUMENTATION;
             }
         }
+        /* One of the 'Const_Data_Size_Func(...)' counting functions? */
+        else if (ParseRec_ptr->item_type & ITEM_FUNC_DEF)
+        { /* Yes */
+            /* Is function prototype or block followed by some blank chars? -> delete them as well */
+            if (ParseRec_ptr->item_type & (ITEM_FUNC_PROTO | ITEM_FUNC_BLOCK))
+            {
+                /* Skip all SPACE chars, if any */
+                tmp = Skip_Chars(tmp, SPACE_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_COMMENT, FORWARD);
+
+                /* Go past the EOL, if present */
+                if (IS_EOL_SEQ(tmp))
+                {
+                    /* Two chars, in case of CR+LF */
+                    tmp += 2;
+                }
+                else if (IS_EOL_CHAR(*tmp))
+                {
+                    /* One char, if only LF */
+                    tmp++;
+                }
+            }
+
+            /* Delete it */
+            Delete(start, tmp);
+
+            /* Desintrumenting Function Name? -> Check if it's preceded by 'extern int' or 'static int' return type */
+            if (ParseRec_ptr->item_type & ITEM_FUNC_NAME)
+            {
+                /* Find the end of the preceding keyword */
+                while ((tmp = Skip_Chars(start - 1, SPACE_CHARS, ParseTbl_ptr, ITEM_ANY, ITEM_MOVED_OVER, BACKWARDS)) != NULL && IS_IDENTIFIER_CHAR(*tmp))
+                {
+                    /* Find the beginning of the preceding keyword */
+                    start = Skip_Identifier(tmp, BACKWARDS) + 1;
+
+                    /* Check if the found keyword matches one of 'extern', 'static' or 'int' */
+                    if (memwordcmp(start, STORAGE_STRING) || memwordcmp(start, INT_STRING))
+                    { /* Yes */
+                        /* Delete it */
+                        Delete(start, tmp + 2);
+                    }
+                }
+            }
+
+            /* Item is no Longer a Function Name/Proto/Block */
+            ParseRec_ptr->item_type &= ~ITEM_FUNC_DEF;
+
+            /* Item is no Longer Instrumentation */
+            ParseRec_ptr->item_type ^= ITEM_INSTRUMENTATION;
+        }
+
     }
 
     /* Find the print_mem() function */
@@ -7489,7 +7617,7 @@ TOOL_ERROR DesInstrument_ROM(
     /* Set State Success */
     ParseCtx_ptr->State = DESINSTRUMENTED;
 
-ret:
+//ret:
     return ErrCode;
 }
 
