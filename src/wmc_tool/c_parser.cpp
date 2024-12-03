@@ -142,17 +142,38 @@
     "_round round round_f roundf "                           \
     "set_min set_max "        
 
+/* Note: the following set of intrinsic BASOP operators has been extracted with */
+/* ctags - x --c - kinds = f move.h control.h control.c complex_basop.h complex_basop.c basop32.h basop32.c enh32.h enh32.c enh40.h enh40.c
+   enh64.h enh64.c enh1632.h enh1632.c enhUL32.h enhUL32.c math_32.h */
 #define BASOP_FUNCTS_STRING      \
-    "add sub abs_s shl shr extract_h extract_l mult L_mult negate round " \
-    "L_mac L_msu L_macNs L_msuNs L_add L_sub L_add_c L_sub_c L_negate L_shl L_shr " \
-    "mult_r shr_r mac_r msu_r L_deposit_h L_deposit_l L_shr_r L_abs L_sat norm_s div_s " \
-    "norm_l move16 move32 Logic16 Logic32 Test s_max s_min L_max L_min L40_max " \
-    "L40_min shl_r L_shl_r L40_shr_r L40_shl_r norm_L40 L40_shl L40_shr L40_negate " \
-    "L40_add L40_sub L40_abs L40_mult L40_mac mac_r40 L40_msu msu_r40 Mpy_32_16_ss " \
-    "Mpy_32_32_ss L_mult0 L_mac0 L_msu0 lshl lshr L_lshl L_lshr L40_lshl L40_lshr " \
-    "s_and s_or s_xor L_and L_or L_xor rotl rotr L_rotl L_rotr L40_set L40_deposit_h " \
-    "L40_deposit_l L40_deposit32 Extract40_H Extract40_L L_Extract40 L40_round " \
-    "L_saturate40 round40 If Goto Break Switch For While Continue L_mls div_l i_mult "
+"Break CL_Extract_imag CL_Extract_imag CL_Extract_real CL_Extract_real CL_add CL_add CL_conjugate CL_conjugate CL_dscale CL_dscale CL_dscale_32 CL_dscale_32" \
+"CL_form CL_form CL_mac_j CL_mac_j CL_move CL_move CL_msu_j CL_msu_j CL_mul_j CL_mul_j CL_multr_32x16 CL_multr_32x16 CL_multr_32x32 CL_multr_32x32 CL_negate" \
+"CL_negate CL_round32_16 CL_round32_16 CL_scale CL_scale CL_scale_32 CL_scale_32 CL_shl CL_shl CL_shr CL_shr CL_sub CL_sub CL_swap_real_imag CL_swap_real_imag" \
+"C_Extract_imag C_Extract_imag C_Extract_real C_Extract_real C_add C_add C_conjugate C_conjugate C_form C_form C_mac_r C_mac_r C_msu_r C_msu_r C_mul_j C_mul_j" \
+"C_multr C_multr C_negate C_negate C_scale C_scale C_shl C_shl C_shr C_shr C_sub C_sub Continue EQ_16 EQ_32 EQ_64 Extract40_H Extract40_L For GE_16 GE_16 GE_32" \
+"GE_32 GE_64 GE_64 GT_16 GT_16 GT_32 GT_32 GT_64 GT_64 Goto If L40_abs L40_abs L40_add L40_add L40_add_o L40_deposit32 L40_deposit32 L40_deposit_h L40_deposit_h" \
+"L40_deposit_l L40_deposit_l L40_lshl L40_lshl L40_lshr L40_lshr L40_mac L40_mac L40_max L40_max L40_min L40_min L40_msu L40_msu L40_mult L40_mult L40_negate" \
+"L40_negate L40_round L40_round L40_set L40_set L40_shl L40_shl L40_shl_o L40_shl_r L40_shl_r L40_shr L40_shr L40_shr_r L40_shr_r L40_sub L40_sub L40_sub_o" \
+"LE_16 LE_16 LE_32 LE_32 LE_64 LE_64 LT_16 LT_16 LT_32 LT_32 LT_64 LT_64 L_Extract40 L_abs L_abs L_add L_add L_add_c L_add_c L_add_co L_add_o L_add_sat L_and" \
+"L_and L_deposit_h L_deposit_h L_deposit_l L_deposit_l L_lshl L_lshl L_lshr L_lshr L_mac L_mac L_mac0 L_mac0 L_mac0_o L_mac0_sat L_macNs L_macNs L_macNs_co" \
+"L_macNs_sat L_mac_o L_mac_sat L_max L_max L_min L_min L_mls L_mls L_mls_o L_mls_sat L_msu L_msu L_msu0 L_msu0 L_msu0_o L_msu0_sat L_msuNs L_msuNs L_msuNs_co" \
+"L_msuNs_sat L_msu_o L_msu_sat L_mult L_mult L_mult0 L_mult0 L_mult_o L_mult_sat L_negate L_negate L_or L_or L_rotl L_rotl L_rotr L_rotr L_sat L_sat L_sat_co" \
+"L_saturate40 L_saturate40 L_saturate40_o L_shl L_shl L_shl_o L_shl_r L_shl_r L_shl_sat L_shr L_shr L_shr_o L_shr_r L_shr_r L_shr_r_sat L_shr_ro L_shr_sat L_sub" \
+"L_sub L_sub_c L_sub_c L_sub_co L_sub_o L_sub_sat L_xor L_xor Logic16 Logic32 Madd_32_16 Madd_32_16 Madd_32_16_r Madd_32_16_r Madd_32_32 Madd_32_32 Madd_32_32_r" \
+"Madd_32_32_r Mpy_32_16_1 Mpy_32_16_1 Mpy_32_16_r Mpy_32_16_r Mpy_32_16_ss Mpy_32_16_ss Mpy_32_16_uu Mpy_32_16_uu Mpy_32_32 Mpy_32_32 Mpy_32_32_r Mpy_32_32_r" \
+"Mpy_32_32_ss Mpy_32_32_ss Mpy_32_32_uu Mpy_32_32_uu Msub_32_16 Msub_32_16 Msub_32_16_r Msub_32_16_r Msub_32_32 Msub_32_32 Msub_32_32_r Msub_32_32_r NE_16 NE_16" \
+"NE_32 NE_32 NE_64 NE_64 Switch Test UL_Mpy_32_32 UL_Mpy_32_32 UL_addNs UL_addNs UL_addNsD UL_and UL_deposit_h UL_deposit_l UL_deposit_l UL_lshl UL_lshr UL_or" \
+"UL_subNs UL_subNs UL_subNsD UL_xor W_abs W_abs W_abs_o W_add W_add W_add_nosat W_add_nosat W_add_o W_deposit32_h W_deposit32_h W_deposit32_l W_deposit32_l" \
+"W_extract_h W_extract_h W_extract_l W_extract_l W_lshl W_lshl W_lshr W_lshr W_mac0_16_16 W_mac0_16_16 W_mac_16_16 W_mac_16_16 W_mac_32_16 W_mac_32_16" \
+"W_mac_32_32 W_msu0_16_16 W_msu0_16_16 W_msu_16_16 W_msu_16_16 W_msu_32_16 W_msu_32_16 W_mult0_16_16 W_mult0_16_16 W_mult0_32_32 W_mult0_32_32 W_mult_16_16" \
+"W_mult_16_16 W_mult_32_16 W_mult_32_16 W_mult_32_32 W_mult_32_32 W_mult_32_32_o W_neg W_neg W_neg_o W_norm W_norm W_round32_s W_round32_s W_round32_s_o" \
+"W_round48_L W_round48_L W_round48_L_o W_round64_L W_round64_L W_sat_l W_sat_l W_sat_m W_sat_m W_shl W_shl W_shl_nosat W_shl_nosat W_shl_o W_shl_sat_l" \
+"W_shl_sat_l W_shr W_shr W_shr_nosat W_shr_nosat W_sub W_sub W_sub_nosat W_sub_nosat W_sub_o While abs_s abs_s add add add_o add_sat div_l div_l div_s div_s" \
+"extract_h extract_h extract_l extract_l get_carry i_mult i_mult i_mult_o i_mult_sat logic16 logic32 lshl lshr mac_r mac_r40 mac_r_sat mac_ro move16 move16" \
+"move32 move32 move64 move64 msu_r msu_r msu_r40 msu_r40 msu_r_sat msu_ro mult mult mult_o mult_r mult_r mult_r_sat mult_ro mult_sat negate negate norm_L40" \
+"norm_L40 norm_l norm_l norm_s norm_s norm_ul_float rotl rotl rotr rotr round round40 round40 round_fx round_fx_o round_fx_sat s_and s_and s_max s_max s_min" \
+"s_min s_or s_or s_xor s_xor saturate saturate_o set_carry set_overflow shl shl shl_o shl_r shl_r shl_ro shl_sat shr shr shr_o shr_r shr_r shr_r_sat shr_ro" \
+"shr_sat sub sub sub_o sub_sat test u_extract_h u_extract_l unset_carry unset_overflow"
 
 #define WMOPS_LIB_INCLUDE_STRING \
     "wmc_auto.h"
