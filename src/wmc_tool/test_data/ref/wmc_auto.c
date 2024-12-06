@@ -40,7 +40,7 @@ int cntr_push_pop = 0; /* global counter for checking balanced push_wmops()/pop_
  * Complexity counting tool
  *--------------------------------------------------------------------*/
 
-
+#define PROM_INST_SIZE               32  /* number of bits of each program instruction when stored in the PROM memory (applied only when the user selects reporting in bytes) */
 #define MAX_FUNCTION_NAME_LENGTH     200 /* Maximum length of the function name */
 #define MAX_PARAMS_LENGTH            200 /* Maximum length of the function parameter string */
 #define MAX_NUM_RECORDS              300 /* Initial maximum number of records -> might be increased during runtime, if needed */
@@ -48,8 +48,6 @@ int cntr_push_pop = 0; /* global counter for checking balanced push_wmops()/pop_
 #define MAX_CALL_TREE_DEPTH          100 /* maximum depth of the function call tree */
 #define DOUBLE_MAX                   0x80000000
 #define FAC                          ( FRAMES_PER_SECOND / 1e6 )
-
-#define FRAMES_PER_SECOND 50.0    #define PROM_INST_SIZE    32 /* number of bits of each program instruction when stored in the PROM memory (applied only when the user selects reporting in bytes) */
 
 typedef struct
 {
